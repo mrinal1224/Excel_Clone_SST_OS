@@ -4,28 +4,47 @@ const ROWS = 20;
 const COLS = 26; // A to Z
 
 const ExcelClone = () => {
-  // State for cell data
   const [data, setData] = useState(
     Array(ROWS).fill().map(() => Array(COLS).fill(''))
   );
-  
-  // State for selected cell
   const [selectedCell, setSelectedCell] = useState(null);
-  
-  // State for formula bar
   const [formulaBarValue, setFormulaBarValue] = useState('');
+  const [error, setError] = useState(null); // For error messages
+  const [invalidCells, setInvalidCells] = useState(new Set()); // Track invalid cells
 
-  // Convert column index to letter (0 = A, 1 = B, etc.)
   const getColumnLabel = (index) => String.fromCharCode(65 + index);
 
-  // Handle cell selection
   const handleCellSelect = (rowIndex, colIndex) => {
     setSelectedCell({ row: rowIndex, col: colIndex });
     setFormulaBarValue(data[rowIndex][colIndex]);
+    setError(null);
   };
 
-  // Handle cell value change
+  const isValidInput = (value) => {
+    // Allow only numeric input and limit length to 10 characters
+    return /^[0-9]*$/.test(value) && value.length <= 10;
+  };
+
+  const markCellAsInvalid = (row, col, invalid) => {
+    const cellKey = `${row}-${col}`;
+    setInvalidCells((prev) => {
+      const updated = new Set(prev);
+      if (invalid) updated.add(cellKey);
+      else updated.delete(cellKey);
+      return updated;
+    });
+  };
+
   const handleCellChange = (rowIndex, colIndex, value) => {
+    if (!isValidInput(value)) {
+      setError('Invalid input: Only numbers are allowed (max 10 characters)');
+      markCellAsInvalid(rowIndex, colIndex, true);
+      return;
+    }
+
+    setError(null); // Clear any previous error
+    markCellAsInvalid(rowIndex, colIndex, false);
+
     const newData = [...data];
     newData[rowIndex][colIndex] = value;
     setData(newData);
@@ -45,13 +64,15 @@ const ExcelClone = () => {
             className="w-96 px-2 py-1 border border-gray-300"
             value={formulaBarValue}
             onChange={(e) => {
-              setFormulaBarValue(e.target.value);
+              const value = e.target.value;
               if (selectedCell) {
-                handleCellChange(selectedCell.row, selectedCell.col, e.target.value);
+                handleCellChange(selectedCell.row, selectedCell.col, value);
               }
+              setFormulaBarValue(value);
             }}
           />
         </div>
+        {error && <span className="text-red-500 text-sm ml-4">{error}</span>}
       </div>
 
       {/* Spreadsheet */}
@@ -73,24 +94,29 @@ const ExcelClone = () => {
                 <td className="bg-gray-100 border border-gray-300 text-center">
                   {rowIndex + 1}
                 </td>
-                {Array(COLS).fill().map((_, colIndex) => (
-                  <td
-                    key={colIndex}
-                    className={`border border-gray-300 p-0 relative ${
-                      selectedCell?.row === rowIndex && selectedCell?.col === colIndex
-                        ? 'bg-blue-50'
-                        : ''
-                    }`}
-                  >
-                    <input
-                      type="text"
-                      className="w-full h-full px-2 py-1 border-none outline-none bg-transparent"
-                      value={data[rowIndex][colIndex]}
-                      onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
-                      onClick={() => handleCellSelect(rowIndex, colIndex)}
-                    />
-                  </td>
-                ))}
+                {Array(COLS).fill().map((_, colIndex) => {
+                  const isInvalid = invalidCells.has(`${rowIndex}-${colIndex}`);
+                  return (
+                    <td
+                      key={colIndex}
+                      className={`border border-gray-300 p-0 relative ${
+                        selectedCell?.row === rowIndex && selectedCell?.col === colIndex
+                          ? 'bg-blue-50'
+                          : ''
+                      }`}
+                    >
+                      <input
+                        type="text"
+                        className={`w-full h-full px-2 py-1 border-none outline-none bg-transparent ${
+                          isInvalid ? 'bg-red-50' : ''
+                        }`}
+                        value={data[rowIndex][colIndex]}
+                        onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
+                        onClick={() => handleCellSelect(rowIndex, colIndex)}
+                      />
+                    </td>
+                  );
+                })}
               </tr>
             ))}
           </tbody>
