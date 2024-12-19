@@ -32,6 +32,15 @@ const ExcelClone = () => {
     setFormulaBarValue(value);
   };
 
+  // Handle double-click for editing
+  const handleDoubleClick = (rowIndex, colIndex, e) => {
+    handleCellSelect(rowIndex, colIndex);
+    const cellInput = document.getElementById(`cell-${rowIndex}-${colIndex}`);
+    if (cellInput) {
+      cellInput.select();
+    }
+  };
+
   return (
     <div className="flex flex-col h-screen">
       {/* Top Bar */}
@@ -83,11 +92,13 @@ const ExcelClone = () => {
                     }`}
                   >
                     <input
+                      id={`cell-${rowIndex}-${colIndex}`} // Unique ID for each cell
                       type="text"
                       className="w-full h-full px-2 py-1 border-none outline-none bg-transparent"
                       value={data[rowIndex][colIndex]}
                       onChange={(e) => handleCellChange(rowIndex, colIndex, e.target.value)}
                       onClick={() => handleCellSelect(rowIndex, colIndex)}
+                      onDoubleClick={(e) => handleDoubleClick(rowIndex, colIndex, e)}
                     />
                   </td>
                 ))}
